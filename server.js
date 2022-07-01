@@ -4,10 +4,11 @@ const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
 require("dotenv").config();
 const PORT = 8000;
+const path = require("path");
 
 let db,
   dbConnect = process.env.DB_CONNECT,
-  dbName = "sample_mtflix",
+  dbName = "sample_mflix",
   dbCollection;
 
 MongoClient.connect(dbConnect).then((client) => {
@@ -17,26 +18,32 @@ MongoClient.connect(dbConnect).then((client) => {
 });
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 app.use(express.static("public"));
+app.use(express.json());
 app.use(cors());
+
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "./index.html"));
+});
 
 app.get("/search", async (req, res) => {
   try {
     let result = await dbCollection
       .aggregate([
         {
-          $serch: {
-            automatic: `${req.params.query}`,
-            path: "title",
-            fuzzy: {
-              maxEdits: 2,
-              prefixlength: 3,
+          $search: {
+            autocomplete: {
+              query: `${req.query.query}`,
+              path: "title",
+              fuzzy: {
+                maxEdits: 2,
+                prefixLength: 3,
+              },
             },
           },
         },
       ])
-      .toAarray();
+      .toArray();
     res.send(result);
   } catch (err) {
     res.status(500).send({ message: err.message });
